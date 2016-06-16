@@ -1,6 +1,6 @@
 # DockerDog
 
-DockerDog reports interesting events to DataDog as metrics.
+DockerDog reports Docker events to DataDog as metrics.
 
 DockerDog requires Docker API 1.22 or higher.
 
