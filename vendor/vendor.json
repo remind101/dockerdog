@@ -1,0 +1,133 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "tGX5p2QIBcRcFlqf7HCMgMUO81I=",
+			"path": "github.com/DataDog/datadog-go/statsd",
+			"revision": "b050cd8f4d7c394545fd7d966c8e2909ce89d552",
+			"revisionTime": "2015-09-30T14:07:41Z"
+		},
+		{
+			"checksumSHA1": "Qt/LbZIDLn5Ve2bLMwxiUNjaXnA=",
+			"path": "github.com/Sirupsen/logrus",
+			"revision": "467d9d55c2d2c17248441a8fc661561161f40d5e",
+			"revisionTime": "2015-02-03T20:19:37Z"
+		},
+		{
+			"checksumSHA1": "r1Ysa3aMAf+5WeefEoCQ0CBxCFY=",
+			"path": "github.com/docker/docker/opts",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "QtnIVz87r5s7Xaci0QUDOfW5VPI=",
+			"path": "github.com/docker/docker/pkg/archive",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "AdR1jasLkqJRsCFH22tS1iOukEY=",
+			"path": "github.com/docker/docker/pkg/fileutils",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "iQlaOTsq2en8kZrOt7pWWVGO+kk=",
+			"path": "github.com/docker/docker/pkg/homedir",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "Kao2fJIQGfZ10aP2yGgfMK2ASSQ=",
+			"path": "github.com/docker/docker/pkg/idtools",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "jMNt9rbvqc75sgRayJ6BgN4xqwo=",
+			"path": "github.com/docker/docker/pkg/ioutils",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "jHb9o47h5I/oIIyT74N1KGQHdgE=",
+			"path": "github.com/docker/docker/pkg/longpath",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "vi44v5ooEavXqxD+sNzf/0Aetfk=",
+			"path": "github.com/docker/docker/pkg/pools",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "txf3EORYff4hO6PEvwBm2lyh1MU=",
+			"path": "github.com/docker/docker/pkg/promise",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "3uz/ivef+IflkDBSB2S5Kc5Xs/I=",
+			"path": "github.com/docker/docker/pkg/stdcopy",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "EM3M5Ep/qDCNIjZz01IVHbXoIdc=",
+			"path": "github.com/docker/docker/pkg/system",
+			"revision": "9cdb6357e2f8c7561ba580c1e16de81d24e1de99",
+			"revisionTime": "2016-06-16T05:08:44Z"
+		},
+		{
+			"checksumSHA1": "0UcvIzobM2POYfKb9Lbr5ny6p7M=",
+			"path": "github.com/docker/engine-api/types/filters",
+			"revision": "f90ecdb1e989f834dabbd91807e891094aa069fe",
+			"revisionTime": "2016-06-17T07:31:37Z"
+		},
+		{
+			"checksumSHA1": "cNK87hsbX/Owi42e/69IO5wrw1Y=",
+			"path": "github.com/docker/engine-api/types/versions",
+			"revision": "f90ecdb1e989f834dabbd91807e891094aa069fe",
+			"revisionTime": "2016-06-17T07:31:37Z"
+		},
+		{
+			"checksumSHA1": "cXZVymYfjlT4nwMymGuPCL6hw5Q=",
+			"path": "github.com/docker/go-units",
+			"revision": "f2d77a61e3c169b43402a0a1e84f06daf29b8190",
+			"revisionTime": "2016-06-13T21:20:13Z"
+		},
+		{
+			"checksumSHA1": "7fWXc7aENj056y/gkiegPclsKxM=",
+			"path": "github.com/fsouza/go-dockerclient",
+			"revision": "3c8f092cb1e9d1e18a07c1d05d993e69a6676097",
+			"revisionTime": "2016-06-13T21:15:37Z"
+		},
+		{
+			"checksumSHA1": "Uzyon2091lmwacNsl1hCytjhHtg=",
+			"path": "github.com/hashicorp/go-cleanhttp",
+			"revision": "ad28ea4487f05916463e2423a55166280e8254b5",
+			"revisionTime": "2016-04-07T17:41:26Z"
+		},
+		{
+			"checksumSHA1": "HgqDa4oBBOol5ziacmj/6c55Xtg=",
+			"path": "github.com/opencontainers/runc/libcontainer/user",
+			"revision": "cc29e3dded8e27ba8f65738f40d251c885030a28",
+			"revisionTime": "2016-06-15T20:00:28Z"
+		},
+		{
+			"checksumSHA1": "tz9NvD7STK26zJLr6GWH6NPTO5M=",
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "f3960ab1f9664ecc4e27c78af27cc9063d745a43",
+			"revisionTime": "2015-10-08T00:55:03Z"
+		},
+		{
+			"checksumSHA1": "88lxkrVVZyBqOBOFnNMBwEexiLY=",
+			"path": "golang.org/x/net/context",
+			"revision": "d7bf3545bb0dacf009c535b3d3fbf53ac0a339ab",
+			"revisionTime": "2016-06-13T04:23:54Z"
+		}
+	],
+	"rootPath": "github.com/remind101/dockerdog"
+}
