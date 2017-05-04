@@ -1,0 +1,37 @@
+{
+  "attributes": {
+    "image": true
+  },
+  "events": {
+    "image": {
+      "actions": {
+        "pull": {},
+        "delete": {}
+      }
+    },
+    "container": {
+      "actions": {
+        "create": {},
+        "start": {},
+        "stop": {},
+        "attach": {},
+        "detach": {},
+        "destroy": {},
+        "exec_create": {},
+        "exec_detach": {},
+        "exec_start": {},
+        "die": {
+          "attributes": {
+            "exitCode": true
+          }
+        },
+        "kill": {
+          "attributes": {
+            "signal": true
+          }
+        },
+        "oom": {}
+      }
+    }
+  }
+}
