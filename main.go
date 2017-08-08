@@ -12,6 +12,7 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 	docker "github.com/fsouza/go-dockerclient"
+	"github.com/remind101/dockerdog/cloudwatch"
 	"github.com/remind101/dockerdog/config"
 	"github.com/remind101/dockerdog/datadog"
 	"github.com/remind101/dockerdog/log"
@@ -55,6 +56,14 @@ var (
 			return log.Watch(c.config, c.events, t)
 		}),
 	}
+	cmdCloudWatch = cli.Command{
+		Name:  "cloudwatch",
+		Usage: "Shuttle events to CloudWatch Events.",
+		Flags: []cli.Flag{},
+		Action: withContext(func(c *Context) error {
+			return cloudwatch.Watch(c.config, c.events)
+		}),
+	}
 )
 
 func main() {
@@ -69,6 +78,7 @@ func main() {
 	app.Commands = []cli.Command{
 		cmdDatadog,
 		cmdLog,
+		cmdCloudWatch,
 	}
 
 	app.Run(os.Args)
