@@ -15,15 +15,23 @@ import (
 // config represents a config file that controls what events and actions to
 // track.
 type config struct {
+	// Attributes defines any global attributes to include across all events
+	// and actions.
 	Attributes map[string]bool `json:"attributes"`
 
+	// Events configures the events that should be tracked.
 	Events map[string]struct {
+		// Actions configures the actions that should be tracked.
 		Actions map[string]struct {
+			// Attributes configures the attributes in the action
+			// that should be included.
 			Attributes map[string]bool `json:"attributes"`
 		} `json:"actions"`
 	} `json:"events"`
 }
 
+// attributes returns a map of the attributes that should be included for a
+// given action.
 func (c *config) attributes(event, action string) map[string]bool {
 	attributes := make(map[string]bool)
 	for k, v := range c.Attributes {
@@ -39,17 +47,12 @@ func (c *config) attributes(event, action string) map[string]bool {
 	return attributes
 }
 
+// loadConfig parses the given json config file in r and returns a parsed
+// config.
 func loadConfig(r io.Reader) (*config, error) {
 	var c config
 	err := json.NewDecoder(r).Decode(&c)
 	return &c, err
-}
-
-var supportedEventTypes = map[string]bool{
-	"container": true,
-	"image":     true,
-	"volume":    false,
-	"network":   false,
 }
 
 func main() {
