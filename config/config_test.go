@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"strings"
@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConfig_Attributes(t *testing.T) {
+func TestConfig_AttributesFor(t *testing.T) {
 	config := testConfig(t)
 
-	assert.Equal(t, map[string]bool{"image": true}, config.attributes("container", "start"))
-	assert.Equal(t, map[string]bool{"image": false}, config.attributes("container", "create"))
-	assert.Equal(t, map[string]bool{"image": true, "exitCode": true}, config.attributes("container", "die"))
-	assert.Equal(t, map[string]bool{"image": true, "signal": true}, config.attributes("container", "kill"))
+	assert.Equal(t, map[string]bool{"image": true}, config.AttributesFor("container", "start"))
+	assert.Equal(t, map[string]bool{"image": false}, config.AttributesFor("container", "create"))
+	assert.Equal(t, map[string]bool{"image": true, "exitCode": true}, config.AttributesFor("container", "die"))
+	assert.Equal(t, map[string]bool{"image": true, "signal": true}, config.AttributesFor("container", "kill"))
 }
 
 const testConfigJson = `{
@@ -50,8 +50,8 @@ const testConfigJson = `{
   }
 }`
 
-func testConfig(t testing.TB) *config {
-	config, err := loadConfig(strings.NewReader(testConfigJson))
+func testConfig(t testing.TB) *Config {
+	config, err := Load(strings.NewReader(testConfigJson))
 	if err != nil {
 		t.Fatal(err)
 	}

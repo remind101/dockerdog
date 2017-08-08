@@ -115,6 +115,10 @@ func (c *Client) RemoveEventListener(listener chan *APIEvents) error {
 	return nil
 }
 
+func (c *Client) CloseEventListeners() {
+	c.eventMonitor.disableEventMonitoring()
+}
+
 func (eventState *eventMonitoringState) addListener(listener chan<- *APIEvents) error {
 	eventState.Lock()
 	defer eventState.Unlock()

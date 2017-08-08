@@ -1,123 +1,158 @@
 package main
 
 import (
-	"encoding/json"
-	"flag"
+	"context"
 	"fmt"
 	"io"
-	"log"
+	golog "log"
 	"os"
+	"os/signal"
+	"syscall"
+	"text/template"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
+	"github.com/remind101/dockerdog/config"
+	"github.com/remind101/dockerdog/datadog"
+	"github.com/remind101/dockerdog/log"
+	"github.com/urfave/cli"
 )
 
-// config represents a config file that controls what events and actions to
-// track.
-type config struct {
-	// Attributes defines any global attributes to include across all events
-	// and actions.
-	Attributes map[string]bool `json:"attributes"`
-
-	// Events configures the events that should be tracked.
-	Events map[string]struct {
-		// Actions configures the actions that should be tracked.
-		Actions map[string]struct {
-			// Attributes configures the attributes in the action
-			// that should be included.
-			Attributes map[string]bool `json:"attributes"`
-		} `json:"actions"`
-	} `json:"events"`
-}
-
-// attributes returns a map of the attributes that should be included for a
-// given action.
-func (c *config) attributes(event, action string) map[string]bool {
-	attributes := make(map[string]bool)
-	for k, v := range c.Attributes {
-		attributes[k] = v
-	}
-	if e, ok := c.Events[event]; ok {
-		if a, ok := e.Actions[action]; ok {
-			for k, v := range a.Attributes {
-				attributes[k] = v
+// Named commands.
+var (
+	cmdDatadog = cli.Command{
+		Name:  "datadog",
+		Usage: "Shuttle events to a dogstatsd daemon",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "statsd",
+				Value: "localhost:8126",
+				Usage: "Address where dogstatsd is running",
+			},
+		},
+		Action: withContext(func(c *Context) error {
+			s, err := statsd.New(c.cli.String("statsd"))
+			if err != nil {
+				return fmt.Errorf("could not connect to statsd: %v", err)
 			}
-		}
-	}
-	return attributes
-}
+			defer s.Close()
 
-// loadConfig parses the given json config file in r and returns a parsed
-// config.
-func loadConfig(r io.Reader) (*config, error) {
-	var c config
-	err := json.NewDecoder(r).Decode(&c)
-	return &c, err
-}
+			return datadog.Watch(c.config, c.events, s)
+		}),
+	}
+	cmdLog = cli.Command{
+		Name:  "log",
+		Usage: "Log events to stdout",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "format, f",
+				Value: "{{.Type}}.{{.Action}}{{range $k, $v := .Attributes}} {{$k}}={{$v}}{{end}}\n",
+				Usage: "Go text/template format for writing the events",
+			},
+		},
+		Action: withContext(func(c *Context) error {
+			t := template.Must(template.New("format").Parse(c.cli.String("format")))
+			return log.Watch(c.config, c.events, t)
+		}),
+	}
+)
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
+	app := cli.NewApp()
+	app.Name = "event-shuttle"
+	app.Usage = "Shuttle Docker events to external systems."
+	app.Flags = []cli.Flag{
+		cli.StringFlag{Name: "config, c",
+			Usage: "Path to a config file specifying the event/action filters.",
+		},
 	}
+	app.Commands = []cli.Command{
+		cmdDatadog,
+		cmdLog,
+	}
+
+	app.Run(os.Args)
 }
 
-func run() error {
-	var (
-		statsdAddr = flag.String("statsd", "localhost:8126", "Address of statsd")
-	)
-	flag.Parse()
-	args := flag.Args()
+func newDockerClient() (*docker.Client, error) {
+	d, err := docker.NewClientFromEnv()
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to Docker daemon: %v", err)
+	}
+	return d, err
+}
+
+func newConfig(path string) (*config.Config, error) {
 	var r io.Reader = os.Stdin
-	if len(args) > 0 {
-		f, err := os.Open(args[0])
+
+	switch path {
+	case "-":
+		r = os.Stdin
+	default:
+		f, err := os.Open(path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer f.Close()
+
 		r = f
 	}
 
-	config, err := loadConfig(r)
-	if err != nil {
-		return fmt.Errorf("error loading config: %v", err)
-	}
-
-	s, err := statsd.New(*statsdAddr)
-	if err != nil {
-		return fmt.Errorf("could not connect to statsd: %v", err)
-	}
-	defer s.Close()
-
-	d, err := docker.NewClientFromEnv()
-	if err != nil {
-		return fmt.Errorf("could not connect to Docker daemon: %v", err)
-	}
-
-	return watch(config, d, s)
+	return config.Load(r)
 }
 
-func watch(config *config, c *docker.Client, s *statsd.Client) error {
-	events := make(chan *docker.APIEvents)
-	if err := c.AddEventListener(events); err != nil {
-		return fmt.Errorf("could not subscribe event listener: %v", err)
-	}
+type Context struct {
+	context.Context
+	cli    *cli.Context
+	config *config.Config
+	events chan *docker.APIEvents
+}
 
-	for event := range events {
-		if _, ok := config.Events[event.Type]; !ok {
-			continue
+func withContext(fn func(c *Context) error) func(c *cli.Context) error {
+	return func(c *cli.Context) error {
+		path := c.GlobalString("config")
+
+		if path == "" {
+			return cli.NewExitError("no config file specified", 1)
 		}
 
-		enabledAttributes := config.attributes(event.Type, event.Action)
+		config, err := newConfig(path)
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
 
-		var tags []string
-		for k, v := range event.Actor.Attributes {
-			if enabledAttributes[k] {
-				tags = append(tags, fmt.Sprintf("%s:%s", k, v))
+		d, err := newDockerClient()
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		events := make(chan *docker.APIEvents)
+		if err := d.AddEventListener(events); err != nil {
+			return cli.NewExitError(fmt.Sprintf("could not subscribe event listener: %v", err), 1)
+		}
+
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			var closed bool
+			for {
+				<-ch
+				golog.Println("Shutting down")
+				if !closed {
+					golog.Println("Closing event listeners")
+					d.CloseEventListeners()
+				}
 			}
+		}()
+
+		err = fn(&Context{
+			config: config,
+			cli:    c,
+			events: events,
+		})
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
 		}
-
-		s.Count(fmt.Sprintf("docker.events.%s.%s", event.Type, event.Action), 1, tags, 1)
+		return nil
 	}
-
-	return nil
 }
