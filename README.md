@@ -13,40 +13,38 @@ The DataDog agent has some problems:
 
 ## Events
 
-DockerDog generates counters for all container and image events, and tags them with the events attributes:
+DockerDog generates these counter metrics for the corresponding Docker events:
 
-**Container events**
+
+| Metric Name                           | Tags       |
+| ---                                   | ---        |
+| `docker.events.container.attach`      |            |
+| `docker.events.container.create`      |            |
+| `docker.events.container.destroy`     |            |
+| `docker.events.container.detach`      |            |
+| `docker.events.container.die`         | `exitCode` |
+| `docker.events.container.exec_create` |            |
+| `docker.events.container.exec_detach` |            |
+| `docker.events.container.exec_start`  |            |
+| `docker.events.container.kill`        | `signal`   |
+| `docker.events.container.oom`         |            |
+| `docker.events.container.start`       |            |
+| `docker.events.container.stop`        |            |
+| `docker.events.image.delete`          |            |
+| `docker.events.image.import`          |            |
+| `docker.events.image.load`            |            |
+| `docker.events.image.pull`            |            |
+| `docker.events.image.push`            |            |
+| `docker.events.image.save`            |            |
+
+
+## Tags from Event Attributes
+
+DockerDog can be configured to map event attributes to metric tags. For
+example, the following command includes the `image` attribute as a tag with key
+`image`, and the `com.example.tags.app.name` attribute as a tag with key
+`app_name`:
 
 ```
-docker.events.container.attach
-docker.events.container.commit
-docker.events.container.copy
-docker.events.container.create
-docker.events.container.destroy
-docker.events.container.die
-docker.events.container.exec_create
-docker.events.container.exec_start
-docker.events.container.export
-docker.events.container.kill
-docker.events.container.oom
-docker.events.container.pause
-docker.events.container.rename
-docker.events.container.resize
-docker.events.container.restart
-docker.events.container.start
-docker.events.container.stop
-docker.events.container.top
-docker.events.container.unpause
-docker.events.container.update
-```
-
-**Image events**
-
-```
-docker.events.image.delete
-docker.events.image.import
-docker.events.image.pull
-docker.events.image.push
-docker.events.image.tag
-docker.events.image.untag
+dockerdog -a image -a com.example.tags.app.name:app_name
 ```
