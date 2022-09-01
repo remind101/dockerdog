@@ -1,123 +1,132 @@
 package main
 
 import (
-	"encoding/json"
-	"flag"
+	"context"
 	"fmt"
-	"io"
-	"log"
-	"os"
+	"strings"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/fsouza/go-dockerclient"
+	"github.com/isobit/cli"
+
+	dockertypes "github.com/docker/docker/api/types"
+	dockerfilters "github.com/docker/docker/api/types/filters"
+	dockerclient "github.com/docker/docker/client"
 )
 
-// config represents a config file that controls what events and actions to
-// track.
-type config struct {
-	// Attributes defines any global attributes to include across all events
-	// and actions.
-	Attributes map[string]bool `json:"attributes"`
+type DockerDog struct {
+	Debug         bool
+	StatsdAddr    string
+	AttributeTags []string `cli:"name=attribute-tag,short=a,repeatable"`
 
-	// Events configures the events that should be tracked.
-	Events map[string]struct {
-		// Actions configures the actions that should be tracked.
-		Actions map[string]struct {
-			// Attributes configures the attributes in the action
-			// that should be included.
-			Attributes map[string]bool `json:"attributes"`
-		} `json:"actions"`
-	} `json:"events"`
+	globalAttributeTags map[string]string
+	eventAttributeTags  map[string]map[string]string
 }
 
-// attributes returns a map of the attributes that should be included for a
-// given action.
-func (c *config) attributes(event, action string) map[string]bool {
-	attributes := make(map[string]bool)
-	for k, v := range c.Attributes {
-		attributes[k] = v
+func NewDockerDog() *DockerDog {
+	return &DockerDog{
+		StatsdAddr:          "localhost:8125",
+		globalAttributeTags: map[string]string{},
+		eventAttributeTags: map[string]map[string]string{
+			"container.attach":      {},
+			"container.create":      {},
+			"container.destroy":     {},
+			"container.detach":      {},
+			"container.die":         {"exitCode": "exitCode"},
+			"container.exec_create": {},
+			"container.exec_detach": {},
+			"container.exec_start":  {},
+			"container.kill":        {"signal": "signal"},
+			"container.oom":         {},
+			"container.start":       {},
+			"container.stop":        {},
+			"image.delete":          {},
+			"image.import":          {},
+			"image.load":            {},
+			"image.pull":            {},
+			"image.push":            {},
+			"image.save":            {},
+		},
 	}
-	if e, ok := c.Events[event]; ok {
-		if a, ok := e.Actions[action]; ok {
-			for k, v := range a.Attributes {
-				attributes[k] = v
+}
+
+func (cmd *DockerDog) Before() error {
+	if cmd.AttributeTags != nil {
+		for _, attrTag := range cmd.AttributeTags {
+			if attr, tag, ok := strings.Cut(attrTag, ":"); ok {
+				cmd.globalAttributeTags[attr] = tag
+			} else {
+				cmd.globalAttributeTags[attrTag] = attrTag
 			}
 		}
 	}
-	return attributes
+	return nil
 }
 
-// loadConfig parses the given json config file in r and returns a parsed
-// config.
-func loadConfig(r io.Reader) (*config, error) {
-	var c config
-	err := json.NewDecoder(r).Decode(&c)
-	return &c, err
+func (cmd *DockerDog) Run() error {
+	statsd, err := statsd.New(cmd.StatsdAddr)
+	if err != nil {
+		return fmt.Errorf("statsd error: %w", err)
+	}
+	defer statsd.Close()
+
+	docker, err := dockerclient.NewClientWithOpts()
+	if err != nil {
+		return fmt.Errorf("docker error: %w", err)
+	}
+	defer docker.Close()
+
+	filters := dockerfilters.NewArgs()
+	for k, _ := range cmd.eventAttributeTags {
+		if typeName, actionName, ok := strings.Cut(k, "."); ok {
+			filters.Add("type", typeName)
+			filters.Add("event", actionName)
+		}
+	}
+
+	fmt.Printf("listening to docker events, sending stats to %s\n", cmd.StatsdAddr)
+	events, errs := docker.Events(
+		context.Background(),
+		dockertypes.EventsOptions{
+			Filters: filters,
+		},
+	)
+	for {
+		select {
+		case event := <-events:
+			key := event.Type + "." + event.Action
+
+			attributeTags, ok := cmd.eventAttributeTags[key]
+			if !ok {
+				fmt.Printf("ignoring %s\n", key)
+				continue
+			}
+
+			tags := []string{}
+			for attr, tag := range cmd.globalAttributeTags {
+				if v, ok := event.Actor.Attributes[attr]; ok {
+					tags = append(tags, fmt.Sprintf("%s:%s", tag, v))
+				}
+			}
+			for attr, tag := range attributeTags {
+				if v, ok := event.Actor.Attributes[attr]; ok {
+					tags = append(tags, fmt.Sprintf("%s:%s", tag, v))
+				}
+			}
+
+			metricName := "docker.events." + key
+			if cmd.Debug {
+				fmt.Printf("%s %v\n", metricName, tags)
+			}
+			statsd.Count(metricName, 1, tags, 1)
+
+		case err := <-errs:
+			return err
+		}
+	}
 }
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func run() error {
-	var (
-		statsdAddr = flag.String("statsd", "localhost:8126", "Address of statsd")
-	)
-	flag.Parse()
-	args := flag.Args()
-	var r io.Reader = os.Stdin
-	if len(args) > 0 {
-		f, err := os.Open(args[0])
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		r = f
-	}
-
-	config, err := loadConfig(r)
-	if err != nil {
-		return fmt.Errorf("error loading config: %v", err)
-	}
-
-	s, err := statsd.New(*statsdAddr)
-	if err != nil {
-		return fmt.Errorf("could not connect to statsd: %v", err)
-	}
-	defer s.Close()
-
-	d, err := docker.NewClientFromEnv()
-	if err != nil {
-		return fmt.Errorf("could not connect to Docker daemon: %v", err)
-	}
-
-	return watch(config, d, s)
-}
-
-func watch(config *config, c *docker.Client, s *statsd.Client) error {
-	events := make(chan *docker.APIEvents)
-	if err := c.AddEventListener(events); err != nil {
-		return fmt.Errorf("could not subscribe event listener: %v", err)
-	}
-
-	for event := range events {
-		if _, ok := config.Events[event.Type]; !ok {
-			continue
-		}
-
-		enabledAttributes := config.attributes(event.Type, event.Action)
-
-		var tags []string
-		for k, v := range event.Actor.Attributes {
-			if enabledAttributes[k] {
-				tags = append(tags, fmt.Sprintf("%s:%s", k, v))
-			}
-		}
-
-		s.Count(fmt.Sprintf("docker.events.%s.%s", event.Type, event.Action), 1, tags, 1)
-	}
-
-	return nil
+	cli.New("dockerdog", NewDockerDog()).
+		Parse().
+		RunFatal()
 }
