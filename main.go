@@ -97,7 +97,9 @@ func (cmd *DockerDog) Run() error {
 
 			attributeTags, ok := cmd.eventAttributeTags[key]
 			if !ok {
-				fmt.Printf("ignoring %s\n", key)
+				if cmd.Debug {
+					fmt.Printf("ignoring %s\n", key)
+				}
 				continue
 			}
 
